@@ -1,0 +1,197 @@
+<html>
+  <body>
+    <svg width="200" height="300">
+ <rect id="game-field" x="0" y="0" width="200" height="300" fill="none" stroke="black" />
+
+ <g transform="rotate(0, 98, 240)">
+  <line x1="98" y1="240" x2="98" y2="220" stroke="red" />
+  <circle cx="98" cy="240" r="4" fill="blue" />
+  <rect x="94" y="200" width="8" height="40" fill="none" stroke="black" />
+ </g>
+ <g id="shell">
+  <circle id="shell-circle" cx="98" cy="240" r="6" fill="black" />
+ </g>
+ <g id="shot" display="none">
+  <circle cx="98" cy="240" r="6" fill="red" />
+ </g>
+ <circle id="pr" cx="100" cy="70" r="60" fill="blue" />
+</svg>
+
+    <script>
+      // Получаем координаты курсора мыши
+      function getCursorPosition(event) {
+        var x = event.clientX;
+        var y = event.clientY;
+
+        // Переводим координаты курсора в координаты игрового поля
+        var svgRect = document.querySelector("#game-field").getBoundingClientRect();
+
+        x -= svgRect.left;
+        y -= svgRect.top;
+
+        return { x: x, y: y };
+      }
+
+      // Переменная для хранения целевых координат выстрела
+      var targetPosition = null;
+
+      // Создаем обработчик событий "mousemove" и "mousedown"
+      document.addEventListener("mousemove", handleMouse);
+      document.addEventListener("mousedown", handleMouse);
+
+      function handleMouse(event) {
+        if (event.buttons === 1 || event.type === "mousedown") {
+          var cursorPosition = getCursorPosition(event);
+
+          if (
+            cursorPosition.x >= 0 &&
+            cursorPosition.x <= 200 &&
+            cursorPosition.y >= 0 &&
+            cursorPosition.y <= 300
+          ) {
+            var groupCenter = { x: 98, y: 240 };
+            var angle = Math.atan2(
+              cursorPosition.y - groupCenter.y,
+              cursorPosition.x - groupCenter.x
+            );
+            angle += Math.PI / 2;
+
+            document
+              .querySelector("g")
+              .setAttribute("transform", "rotate(" + angle * 180 / Math.PI + ", 98, 240)");
+
+            if (cursorPosition.y >= 0 && cursorPosition.y <= 300) {
+              document.querySelector("line").setAttribute("y2", "-20");
+            } else {
+              document.querySelector("line").setAttribute("y2", "220");
+            }
+          } else {
+            document.querySelector("g").setAttribute("transform", "rotate(0, 98, 240)");
+            document.querySelector("line").setAttribute("y2", "220");
+          }
+
+          if (event.type === "mousedown") {
+            var clickPosition = cursorPosition;
+            if (
+              clickPosition.x >= 0 &&
+              clickPosition.x <= 200 &&
+              clickPosition.y >= 0 &&
+              clickPosition.y <= 300
+            ) {
+              targetPosition = clickPosition;
+              document.querySelector("#shot").setAttribute("display", "block");
+              document.querySelector("svg").setAttribute("data-clicked", "true");
+            }
+          }
+        }
+      }
+
+      // Создаем обработчик события mouseup (отпускание кнопки мыши)
+      document.addEventListener("mouseup", function (event) {
+        // Проверяем, была ли отпущена левая кнопка мыши и есть ли целевые координаты выстрела
+        if (event.button === 0 && targetPosition) {
+          // Проверяем, что клик совершен после прицеливания
+          if (document.querySelector("svg").getAttribute("data-clicked")) {
+            // Делаем группу с id="shot" невидимой
+            document.querySelector("#shot").setAttribute("display", "none");
+
+            // Запускаем анимацию перемещения снаряда
+            var shellCircle = document.querySelector("#shell-circle");
+            shellCircle.setAttribute("cx", "98");
+            shellCircle.setAttribute("cy", "240");
+
+            // Получаем координаты отпускания кнопки мыши
+            var releasePosition = getCursorPosition(event);
+
+            // Устанавливаем целевые координаты для выстрела
+            targetPosition = releasePosition;
+
+            // Координаты, по которым был произведен клик
+            var targetX = targetPosition.x;
+            var targetY = targetPosition.y;
+
+            // Расстояние между снарядом и целевыми координатами
+            var distanceX = targetX - 98;
+            var distanceY = targetY - 240;
+
+            // Продолжительность анимации перемещения снаряда
+            var duration = 5000; // 2 секунды
+            var startTime = null;
+
+            var speed = 0.4; // Установите желаемую скорость перемещения снаряда
+
+            function animateShot(timestamp) {
+              if (!startTime) startTime = timestamp;
+              var elapsedTime = timestamp - startTime;
+
+              // Вычисляем прогресс анимации на основе времени, прошедшего с начала
+              var progress = elapsedTime / duration;
+
+              if (progress > 1) progress = 1;
+
+              // Вычисляем единичный вектор направления к цели
+              var directionX = distanceX / Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+              var directionY = distanceY / Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+              // Вычисляем текущие координаты снаряда с постоянной скоростью
+              var newCX = 98 + directionX * speed * elapsedTime;
+              var newCY = 240 + directionY * speed * elapsedTime;
+
+              do {
+                if (newCX < 0) {
+                    newCX = -newCX;
+                 directionX = -directionX;
+                }
+
+               if (newCX > 200) {
+                  newCX = 200 - (newCX - 200);
+                 directionX = -directionX;
+                 }
+
+                if (newCY < 0) {
+                  newCY = -newCY;
+                 directionY = -directionY;
+               }
+
+               if (newCY > 300) {
+                 newCY = 300 - (newCY - 300);
+               directionY = -directionY;
+               }
+            } while (newCX < 0 || newCX > 200 || newCY < 0 || newCY > 300);
+
+              // Обновляем координаты снаряда
+              shellCircle.setAttribute("cx", newCX);
+              shellCircle.setAttribute("cy", newCY);
+
+              if (progress < 1) {
+                // Если анимация не завершена, продолжаем анимацию
+                requestAnimationFrame(animateShot);
+              } else {
+                // Анимация завершена, сбрасываем данные и возвращаем снаряд в исходное положение
+                document.querySelector("svg").removeAttribute("data-clicked");
+                targetPosition = null;
+                shellCircle.setAttribute("cx", "98");
+                shellCircle.setAttribute("cy", "240");
+              }
+
+              // Возвращаем настройки в исходные позиции через 0,3 секунды
+              setTimeout(function () {
+                document.querySelector("g").setAttribute("transform", "rotate(0, 98, 240)");
+                document.querySelector("#shot").setAttribute("display", "none");
+                document.querySelector("line").setAttribute("y2", "220");
+              }, 300);
+            }
+
+            requestAnimationFrame(animateShot);
+          }
+        }
+      });
+        // ???????? ?????? ?? ??????, ??????? ?? ????? ??????? ??????????
+var object = document.getElementById("myObject");
+
+
+
+
+    </script>
+  </body>
+</html>

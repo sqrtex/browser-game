@@ -1,0 +1,80 @@
+<html>
+<body>
+<svg width="200" height="300">
+ <rect id="game-field" x="0" y="0" width="200" height="300" fill="none" stroke="black" />
+
+
+ <g id="shell">
+  <circle id="shell-circle" cx="98" cy="240" r="6" fill="black" />
+
+ <circle id="pr" cx="100" cy="70" r="60" stroke="blue"  fill="none" />
+</svg>
+
+<script>
+  // Получаем элементы черного и синего кругов
+  const blackCircle = document.getElementById("shell-circle");
+  const blueCircle = document.getElementById("pr");
+
+  // Устанавливаем начальный угол черного круга
+  let angle = -80;
+
+  // Устанавливаем скорость черного круга
+  const speed = 2;
+ 
+  // Вычисляем компоненты вектора скорости по оси x и y
+  let velocityX = speed * Math.cos(angle * Math.PI / 180);
+  let velocityY = speed * Math.sin(angle * Math.PI / 180);
+
+  // Устанавливаем начальное положение черного круга
+  let x = blackCircle.cx.baseVal.value;
+  let y = blackCircle.cy.baseVal.value;
+ 
+  // Запускаем анимацию
+  const startTime = performance.now();
+
+  function animate(currentTime) {
+    // Вычисляем прошедшее время с начала анимации
+    const elapsedTime = currentTime - startTime;
+
+    // Вычисляем новое положение черного круга
+    x += velocityX * (elapsedTime / 1000);
+    y += velocityY * (elapsedTime / 1000);
+
+    // Проверяем, достиг ли черный круг синего круга
+    const dx = blueCircle.cx.baseVal.value - x;
+    const dy = blueCircle.cy.baseVal.value - y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance <= blackCircle.r.baseVal.value + blueCircle.r.baseVal.value) {
+      // Вычисляем точку касания
+      const a = dx * dx + dy * dy;
+      const b = 2 * (dx * (x - blueCircle.cx.baseVal.value) + dy * (y - blueCircle.cy.baseVal.value));
+      const c = (x - blueCircle.cx.baseVal.value) * (x - blueCircle.cx.baseVal.value) + (y - blueCircle.cy.baseVal.value) * (y - blueCircle.cy.baseVal.value) - (blackCircle.r.baseVal.value + blueCircle.r.baseVal.value) * (blackCircle.r.baseVal.value + blueCircle.r.baseVal.value);
+      const d = b * b - 4 * a * c;
+      const t = (-b + Math.sqrt(d)) / (2 * a);
+      const intersectionX = x + t * dx;
+      const intersectionY = y + t * dy;
+
+      // Вычисляем угол между вектором направления движения черного круга и радиуса синей окружности в точке касания
+      const angleBetween = Math.atan2(intersectionY - blueCircle.cy.baseVal.value, intersectionX - blueCircle.cx.baseVal.value) * 180 / Math.PI;
+
+      // Вычисляем угол отражения
+      angle = - angleBetween;
+
+      // Вычисляем новые компоненты вектора скорости
+      velocityX = speed * Math.cos(angle * Math.PI / 180);
+      velocityY = speed * Math.sin(angle * Math.PI / 180);
+    }
+
+    // Обновляем положение черного круга
+    blackCircle.setAttribute("cx", x);
+    blackCircle.setAttribute("cy", y);
+
+    // Продолжаем анимацию
+    requestAnimationFrame(animate);
+  }
+ 
+  // Запускаем анимацию
+  requestAnimationFrame(animate);
+</script>
+</body> 
+</html>
